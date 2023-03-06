@@ -1,0 +1,6 @@
+---
+library: false
+name: codeql-java-workshop-sqlinjection-owasp
+version: 0.0.1
+dependencies:
+  codeql/java-all: 0.4.6
