@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns2:dbinfo xmlns:ns2="https://semmle.com/schemas/dbinfo">
+    <sourceLocationPrefix>/home/luke/git/SecurityShepherd/src/MobileShepherd/CSInjection</sourceLocationPrefix>
+    <unicodeNewlines>false</unicodeNewlines>
+    <columnKind>utf16</columnKind>
+    <primaryLanguage>java</primaryLanguage>
+</ns2:dbinfo>
