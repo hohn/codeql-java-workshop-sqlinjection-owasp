@@ -51,10 +51,13 @@ There is no sanitization so there exists a potential SQL injection vulnerability
   git clone https://github.com/hohn/codeql-java-workshop-sqlinjection-owasp.git
   ```
 
-- Install the CodeQL pack dependencies using the command `CodeQL: Install Pack Dependencies` and select `exercises`, `exercises-tests`, `solutions`, and `solutions-tests`.
+- Install the CodeQL pack dependencies using the command `CodeQL: Install Pack
+  Dependencies` and select `exercises`, `exercises-tests`, `solutions`, and
+  `solutions-tests`.  Via menu, this is `view > command palette`, then type and
+  watch the completion.
 
 - Select the `MobileSheperd-CSInjection` database as the current database by
-  right-clicking on the directory in the File explorer and running the command
+  right-clicking on the directory in the File explorer and selecting the command
   `CodeQL: Set Current Database`.
 
 ## Documentation links <a id="documentationlinks"></a>
@@ -70,12 +73,11 @@ The workshop is split into several steps. You can write one query per step, or w
 ### Section 1: Finding Sources - Method Calls to getText()  <a id="section1"></a>
 
  1. Find all method calls in the program.
-    <details>
-    <summary>Hint</summary>
+
+    Hint:
 
     - A method call is represented by the `MethodAccess` type in the CodeQL Java library.
 
-    </details>
     <details>
     <summary>Solution</summary>
 
@@ -88,13 +90,13 @@ The workshop is split into several steps. You can write one query per step, or w
     </details>
 
  1. Find all the calls in the program to methods called `getText`
-    <details>
-    <summary>Hints</summary>
 
-    - `MethodAccess` has a predicate called `getMethod()` for returning the method.
+    Hints:
+    - `MethodAccess` has a predicate called `getMethod()` for returning the
+      method. 
+
     - Add a `where` clause.
 
-    </details>
     <details>
     <summary>Solution</summary>
 
@@ -108,25 +110,27 @@ The workshop is split into several steps. You can write one query per step, or w
     </details>
 
 ### Section 2: Finding Sinks - Method Calls to rawQuery  <a id="section2"></a>
- 1. Find all the calls in the program to methods called `rawQuery`
+1. Find all the calls in the program to methods called `rawQuery`
 
     ```ql
     import java
 
-    from MethodAccess call
-    where ma.getMethod().hasQualifiedName(net.sqlcipher.databaset", "SQLLiteDatabase", "rawQuery")
-    select ma
+    from MethodAccess ma 
+    where ma.getMethod().hasName("rawQuery")
+    select ma, ma.getMethod().getQualifiedName()
     ```
-1. The `rawQuery` method sends the SQL query which is first argument (i.e the argument at index 0) to the database. Update your query to report this argument. 
+
+1. The `rawQuery` method sends the SQL query which is first argument (i.e the
+    argument at index 0) to the database. Update your query to report this
+    argument.
   
-    <details>
-    <summary>Hint</summary>
+    Hints:
 
     - `MethodCall.getArgument(int i)` returns the argument at the i-th index.
-    - The arguments are _expressions_ in the program, represented by the CodeQL class `Expr`. Introduce a new variable to hold the argument expression.
+    - The arguments are _expressions_ in the program, represented by the CodeQL
+      class `Expr`. Introduce a new variable to hold the argument expression. 
     - `VarAccess` is a reference to a field, parameter or local variable
 
-    </details>
     <details>
     <summary>Solution</summary>
 	
