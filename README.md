@@ -4,17 +4,19 @@
 
 ## Overview
 
- - [Problem statement](#problemstatement)
- - [Setup instructions](#setupinstructions)
- - [Documentation Links](#documentationlinks)
- - [Workshop](#workshop)
-   - [Section 1: Finding Sources - Method Calls to getText()](#section1)
-   - [Section 2: Finding Sinks - Method Calls to rawQuery](#section2)
-   - [Section 3: Data Flow](#section3)
-   - [Section 4: Adding Additional Taint Steps](#section4)
-   - [Section 5: Final Query](#section5)
-   - [Section 6 - Extending default queries](#section6)
- - [What's next](#whatsnext)
+  - [Problem statement <a id="problemstatement"></a>](#problem-statement-)
+  - [Prerequisites and setup instructions](#prerequisites-and-setup-instructions)
+  - [Documentation links <a id="documentationlinks"></a>](#documentation-links-)
+  - [Dataflow illustrated <a id="df_illustration"></a>](#dataflow-illustrated-)
+  - [Workshop <a id="workshop"></a>](#workshop-)
+    - [Section 1: Finding Sources - Method Calls to getText()  <a id="section1"></a>](#section-1-finding-sources---method-calls-to-gettext--)
+    - [Section 2: Finding Sinks - Method Calls to rawQuery  <a id="section2"></a>](#section-2-finding-sinks---method-calls-to-rawquery--)
+    - [Section 3: Data Flow  <a id="section3"></a>](#section-3-data-flow--)
+    - [Section 4: Final Query <a id="section5"></a>](#section-4-final-query-)
+    - [Section 5: (optional) Adding Additional Taint Steps <a id="section4"></a>](#section-5-optional-adding-additional-taint-steps-)
+    - [Section 6: (optional) Extending default queries <a id="section6"></a>](#section-6-optional-extending-default-queries-)
+  - [What's next? <a id="whatsnext"></a>](#whats-next-)
+  - [Acknowledgements](#acknowledgements)
 
 ## Problem statement <a id="problemstatement"></a>
 In this workshop, we will be using CodeQL to find SQL injection vulnerabilities (CWE-089) in a database built from the Security Shephard solution maintained by OWASP. This repository is generally used for training and education purposes. This repository consists of many small applications. We will be analysing client side injection in an Android application. 
@@ -256,12 +258,77 @@ select sink, source
 
 You can now run the completed query. What results did you get? Was it what you were expecting? 
 
-### Section 4: Adding Additional Taint Steps <a id="section4"></a>
+### Section 4: Final Query <a id="section5"></a>
+
+We can update the query so that it not only reports the sink, but it also reports the source and the path to that source. We can do this by making these changes:
+The answer to this is to convert the query to a _path problem_ query. There are five parts we will need to change:
+ - Convert the `@kind` from `problem` to `path-problem`. This tells the CodeQL toolchain to interpret the results of this query as path results.
+ - Add a new import `DataFlow::PathGraph`, which will report the path data alongside the query results.
+ - Change `source` and `sink` variables from `DataFlow::Node` to `DataFlow::PathNode`, to ensure that the nodes retain path information.
+ - Use `hasFlowPath` instead of `hasFlow`.
+ - Change the select to report the `source` and `sink` as the second and third columns. The toolchain combines this data with the path information from `PathGraph` to build the paths.
+
+ 3. Convert your previous query to a path-problem query.
+    <details>
+    <summary>Solution</summary>
+
+	```ql
+	/**
+	* @name SQL Injection in OWASP Security Shepard
+	* @kind problem
+	* @id java/sqlinjectionowasp
+	*/
+
+	import java
+	import semmle.code.java.dataflow.TaintTracking
+	import DataFlow::PathGraph
+
+	class AndroidSQLInjection extends TaintTracking::Configuration {
+	  AndroidSQLInjection() { this = "AndroidSQLInjection" }
+
+	  override predicate isSource(DataFlow::Node node) {
+	    exists(MethodAccess ma |
+	      ma.getMethod().hasQualifiedName("android.widget", "EditText", "getText") and
+	      node.asExpr() = ma
+	    )
+	  }
+
+	  override predicate isSink(DataFlow::Node node) {
+	    exists(MethodAccess ma |
+	      ma.getMethod().hasQualifiedName("net.sqlcipher.database", "SQLiteDatabase", "rawQuery") and
+	      node.asExpr() = ma.getArgument(0)
+	    )
+	  }
+      /*
+	  override predicate isAdditionalTaintStep(DataFlow::Node node1, DataFlow::Node node2) {
+	    exists(MethodAccess ma |
+	      ma.getQualifier().getType().hasName(["Editable"]) and
+	      ma.getMethod().hasName("toString") and
+	      node1.asExpr() = ma.getQualifier() and
+	      node2.asExpr() = ma
+	    )
+	  }
+      */
+	}
+
+	from AndroidSQLInjection config, DataFlow::PathNode source, DataFlow::PathNode sink
+	where config.hasFlowPath(source, sink)
+	select sink, source, sink, "SQL Injection"
+
+	```
+    </details>
+
+### Section 5: (optional) Adding Additional Taint Steps <a id="section4"></a>
 Sometimes the data flow or taint tracking analysis will not be aware that data may flow through a particular code pattern or function call. It is conservative by default, to keep results precise.
 
 We can add additional problem-specific steps if necessary, by implementing the `isAdditionalTaintStep` predicate on our `TaintTracking::Configuration` subclass.
 
-By inspecting `String CheckName = username.getText().toString()` we can observe that the `toString()` is a method call on the return value of `getText()` which is an `Editable` type. Our current taint tracking analysis does not capture flow from the `Editable` object returned by `username.getText()` to `toString()`
+By inspecting `String CheckName = username.getText().toString()` we can observe
+that the `toString()` is a method call on the return value of `getText()` which is
+an `Editable` type. 
+
+Previously, our taint tracking analysis did not capture flow from the `Editable`
+object returned by `username.getText()` to `toString()`
 
 As alternative, we can just check all flows from a source:
 ```codeql
@@ -321,66 +388,8 @@ and try again.
   ```
   </details>
 
-### Section 5: Final Query <a id="section5"></a>
 
-We can update the query so that it not only reports the sink, but it also reports the source and the path to that source. We can do this by making these changes:
-The answer to this is to convert the query to a _path problem_ query. There are five parts we will need to change:
- - Convert the `@kind` from `problem` to `path-problem`. This tells the CodeQL toolchain to interpret the results of this query as path results.
- - Add a new import `DataFlow::PathGraph`, which will report the path data alongside the query results.
- - Change `source` and `sink` variables from `DataFlow::Node` to `DataFlow::PathNode`, to ensure that the nodes retain path information.
- - Use `hasFlowPath` instead of `hasFlow`.
- - Change the select to report the `source` and `sink` as the second and third columns. The toolchain combines this data with the path information from `PathGraph` to build the paths.
-
- 3. Convert your previous query to a path-problem query.
-    <details>
-    <summary>Solution</summary>
-
-	```ql
-	/**
-	* @name SQL Injection in OWASP Security Shepard
-	* @kind problem
-	* @id java/sqlinjectionowasp
-	*/
-
-	import java
-	import semmle.code.java.dataflow.TaintTracking
-	import DataFlow::PathGraph
-
-	class AndroidSQLInjection extends TaintTracking::Configuration {
-	  AndroidSQLInjection() { this = "AndroidSQLInjection" }
-
-	  override predicate isSource(DataFlow::Node node) {
-	    exists(MethodAccess ma |
-	      ma.getMethod().hasQualifiedName("android.widget", "EditText", "getText") and
-	      node.asExpr() = ma
-	    )
-	  }
-
-	  override predicate isSink(DataFlow::Node node) {
-	    exists(MethodAccess ma |
-	      ma.getMethod().hasQualifiedName("net.sqlcipher.database", "SQLiteDatabase", "rawQuery") and
-	      node.asExpr() = ma.getArgument(0)
-	    )
-	  }
-
-	  override predicate isAdditionalTaintStep(DataFlow::Node node1, DataFlow::Node node2) {
-	    exists(MethodAccess ma |
-	      ma.getQualifier().getType().hasName(["Editable"]) and
-	      ma.getMethod().hasName("toString") and
-	      node1.asExpr() = ma.getQualifier() and
-	      node2.asExpr() = ma
-	    )
-	  }
-	}
-
-	from AndroidSQLInjection config, DataFlow::PathNode source, DataFlow::PathNode sink
-	where config.hasFlowPath(source, sink)
-	select sink, source, sink, "SQL Injection"
-
-	```
-    </details>
-
-### Section 6 - Extending default queries <a id="section6"></a>
+### Section 6: (optional) Extending default queries <a id="section6"></a>
 
 Although we have created a query from scratch to find this problem, we can also extend our default SQL Injection queries, [SqlTaintedLocal.ql](https://github.com/github/codeql/blob/main/java/ql/src/Security/CWE/CWE-089/SqlTaintedLocal.ql) and [SqlTainted.ql](https://github.com/github/codeql/blob/main/java/ql/src/Security/CWE/CWE-089/SqlTainted.ql) to capture these sources and sinks. This is done by implementing the file [Customizations.qll](https://github.com/github/codeql/blob/main/java/ql/src/Customizations.qll) located at the root of the CodeQL repository.  
 
