@@ -51,9 +51,10 @@ There is no sanitization so there exists a potential SQL injection vulnerability
   git clone https://github.com/hohn/codeql-java-workshop-sqlinjection-owasp.git
   ```
 
+- Open VS Code on the workspace file, `java-owasp.code-workspace`.
+
 - Install the CodeQL pack dependencies using the command `CodeQL: Install Pack
-  Dependencies` and select `exercises`, `exercises-tests`, `solutions`, and
-  `solutions-tests`.  Via menu, this is `view > command palette`, then type and
+  Dependencies`.  Via menu, this is `view > command palette`, then type and
   watch the completion.
 
 - Select the `MobileSheperd-CSInjection` database as the current database by
@@ -65,6 +66,14 @@ If you get stuck, try searching our documentation and blog posts for help and id
 - [Learning CodeQL](https://help.semmle.com/QL/learn-ql)
 - [Learning CodeQL for Java](https://help.semmle.com/QL/learn-ql/cpp/ql-for-java.html)
 - [Using the CodeQL extension for VS Code](https://help.semmle.com/codeql/codeql-for-vscode.html)
+
+
+## Dataflow illustrated <a id="df_illustration"></a>
+A good way to illustrate dataflow is to follow the result of running a complete
+query; do that by opening `fullQuery.ql`, right-click and select `run query on
+selected database`.
+Then use the `CodeQLQuery Results viewer` to explore the paths.  Don't try to
+understand the query yet; it is developed in the rest of this tutorial.
 
 
 ## Workshop <a id="workshop"></a>
@@ -112,6 +121,14 @@ The workshop is split into several steps. You can write one query per step, or w
 ### Section 2: Finding Sinks - Method Calls to rawQuery  <a id="section2"></a>
 1. Find all the calls in the program to methods called `rawQuery`
 
+    Hint:
+    - start with plain `hasName`, use `getQualifiedName` to get the qualified name
+      -- the module and class names.
+    - Use that information in `hasQualifiedName` to further narrow the results
+
+    <details>
+    <summary>Solution</summary>
+	
     ```ql
     import java
 
@@ -119,6 +136,9 @@ The workshop is split into several steps. You can write one query per step, or w
     where ma.getMethod().hasName("rawQuery")
     select ma, ma.getMethod().getQualifiedName()
     ```
+
+    And see the following for `hasQualifiedName`.
+    </details>
 
 1. The `rawQuery` method sends the SQL query which is first argument (i.e the
     argument at index 0) to the database. Update your query to report this
