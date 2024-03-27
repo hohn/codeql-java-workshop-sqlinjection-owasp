@@ -215,15 +215,13 @@ select sink, source
 
 1. Complete the `isSource` predicate using the query you wrote previously
 
-    <details>
-    <summary>Hint</summary>
+    Hint
 
     - You can translate from a query clause to a predicate by:
        - Converting the variable declarations in the `from` part to the variable declarations of an `exists`
        - Placing the `where` clause conditions (if any) in the body of the exists
        - Adding a condition which equates the `select` to one of the parameters of the predicate.
    
-    </details>
     <details>
     <summary>Solution</summary>
 
@@ -238,10 +236,11 @@ select sink, source
     </details>
 
 1. Complete the `isSink` predicate 
-    <details>
-    <summary>Hint</summary>
-     Complete the same process as above.
-   </details>
+
+   Hint
+
+    - Complete the same process as above.
+
    <details>
     <summary>Solution</summary>
 
@@ -327,6 +326,22 @@ By inspecting `String CheckName = username.getText().toString()` we can observe
 that the `toString()` is a method call on the return value of `getText()` which is
 an `Editable` type. 
 
+In CodeQL, this is the following:
+	
+ ```codeql
+ // String CheckName = username.getText().toString();
+ //                  \----methodAccess------------/
+ //                  \--- qualifier---/ \-method--/	
+  override predicate isAdditionalTaintStep(DataFlow::Node node1, DataFlow::Node node2) {
+	exists(MethodAccess ma |	 
+		ma.getQualifier().getType().hasName(["Editable"]) and
+	     	ma.getMethod().hasName("toString") and
+	      	node1.asExpr() = ma.getQualifier() and
+	      	 node2.asExpr() = ma
+	       )
+        }
+  ```
+
 Previously, our taint tracking analysis did not capture flow from the `Editable`
 object returned by `username.getText()` to `toString()`
 
@@ -370,23 +385,6 @@ and try again.
 
 
 (If you are using `DataFlow::Configuration`, this predicate is called `isAdditionalFlowStep` instead.
-  <details>
-  <summary>Solution</summary>
-	
- ```codeql
- // String CheckName = username.getText().toString();
- //                  \----methodAccess------------/
- //                  \--- qualifier---/ \-method--/	
-  override predicate isAdditionalTaintStep(DataFlow::Node node1, DataFlow::Node node2) {
-	exists(MethodAccess ma |	 
-		ma.getQualifier().getType().hasName(["Editable"]) and
-	     	ma.getMethod().hasName("toString") and
-	      	node1.asExpr() = ma.getQualifier() and
-	      	 node2.asExpr() = ma
-	       )
-        }
-  ```
-  </details>
 
 
 ### Section 6: (optional) Extending default queries <a id="section6"></a>
