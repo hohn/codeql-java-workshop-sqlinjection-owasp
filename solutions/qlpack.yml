@@ -1,0 +1,8 @@
+---
+library: false
+name: codeql-java-sqlinjection-owasp-solutions
+version: 0.0.1
+# Install the queries for browsing.  They are not needed for this example.
+dependencies:
+    codeql/java-all: "*"
+    codeql/java-queries: "*"

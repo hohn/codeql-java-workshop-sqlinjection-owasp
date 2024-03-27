@@ -1,0 +1,8 @@
+---
+library: false
+name: codeql-java-sqlinjection-owasp-test
+version: 0.0.1
+dependencies:
+    "codeql-java-sqlinjection-owasp-solutions" : "*"
+extractor: java
+
