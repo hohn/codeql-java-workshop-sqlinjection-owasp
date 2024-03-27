@@ -1,0 +1,38 @@
+#!/bin/bash
+
+usage="Take a snapshot of the current session.ql
+
+This query is developed from source code, so test cases must be manually provided.
+This script just creates empty java files as starting point.
+
+Usage:
+    $0 TheSnapShotName
+"
+if [ $# -ne 1 ]
+then
+    echo "$usage"
+    exit 1
+fi
+
+if [ "$1" = "-h" ]
+then
+    echo "$usage"
+    exit 1
+fi
+
+qname=$1
+
+#* create the tests
+mkdir -p tests/$qname
+touch tests/$qname/$qname.expected
+echo $qname.ql > tests/$qname/$qname.qlref     
+git add tests/$qname/$qname.expected
+git add tests/$qname/$qname.qlref
+
+#* create an empty test file
+touch tests/$qname/$qname.java
+git add tests/$qname/$qname.java
+
+#* Copy the current session
+cp session/session.ql solutions/$qname.ql
+git add solutions/$qname.ql

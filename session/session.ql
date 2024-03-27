@@ -1,3 +1,5 @@
 import java
 
-select 42
+from MethodAccess ma 
+where ma.getMethod().hasQualifiedName("android.widget", "EditText", "getText") 
+select ma
